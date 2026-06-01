@@ -23,7 +23,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://restaurant-self-kappa-35.vercel.app",
+  "https://restaurantdemakh.vercel.app",
 ].filter(Boolean);
 
 app.use(

@@ -39,7 +39,7 @@ NODE_ENV=development
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/senegal-food
 JWT_SECRET=your_super_secret_key_here
 JWT_EXPIRE=7d
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=https://restaurantdemakh.vercel.app
 ```
 
 **Frontend** — create `frontend/.env`:
@@ -77,7 +77,7 @@ cd frontend
 npm run dev
 ```
 
-Visit: http://localhost:5173
+Visit: https://restaurantdemakh.vercel.app
 
 ---
 
