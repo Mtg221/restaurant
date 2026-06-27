@@ -38,10 +38,11 @@ const errorHandler = (err, req, res, next) => {
     return res.status(401).json({ success: false, message: "Token expired" });
   }
 
-  // Default server error
+  // Default server error — ne pas exposer les détails en production
+  const isProd = process.env.NODE_ENV === "production";
   res.status(error.statusCode || 500).json({
     success: false,
-    message: error.message || "Server Error",
+    message: isProd ? "Server Error" : (error.message || "Server Error"),
   });
 };
 
