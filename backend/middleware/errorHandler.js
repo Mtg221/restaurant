@@ -1,49 +1,28 @@
-// middleware/errorHandler.js
-// Global error handling middleware
-
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
-
-  // Log error in development
-  if (process.env.NODE_ENV === "development") {
-    console.error("🔴 Error:", err);
+  if (process.env.NODE_ENV !== "production") {
+    console.error("Error:", err.message);
   }
 
-  // Mongoose bad ObjectId (e.g. invalid product ID in URL)
-  if (err.name === "CastError") {
-    error.message = `Resource not found with id: ${err.value}`;
-    return res.status(404).json({ success: false, message: error.message });
-  }
+  if (err.name === "CastError")
+    return res.status(404).json({ success: false, message: "Ressource introuvable" });
 
-  // Mongoose duplicate key (e.g. duplicate email)
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    error.message = `${field} already exists`;
-    return res.status(400).json({ success: false, message: error.message });
+    const field = Object.keys(err.keyValue || {})[0] || "champ";
+    return res.status(400).json({ success: false, message: `${field} déjà utilisé` });
   }
 
-  // Mongoose validation error
   if (err.name === "ValidationError") {
-    const messages = Object.values(err.errors).map((val) => val.message);
+    const messages = Object.values(err.errors).map(v => v.message);
     return res.status(400).json({ success: false, message: messages.join(", ") });
   }
 
-  // JWT errors
-  if (err.name === "JsonWebTokenError") {
-    return res.status(401).json({ success: false, message: "Invalid token" });
-  }
+  if (err.name === "JsonWebTokenError")
+    return res.status(401).json({ success: false, message: "Token invalide" });
 
-  if (err.name === "TokenExpiredError") {
-    return res.status(401).json({ success: false, message: "Token expired" });
-  }
+  if (err.name === "TokenExpiredError")
+    return res.status(401).json({ success: false, message: "Token expiré" });
 
-  // Default server error — ne pas exposer les détails en production
-  const isProd = process.env.NODE_ENV === "production";
-  res.status(error.statusCode || 500).json({
-    success: false,
-    message: isProd ? "Server Error" : (error.message || "Server Error"),
-  });
+  res.status(err.statusCode || 500).json({ success: false, message: "Erreur serveur" });
 };
 
 module.exports = errorHandler;
