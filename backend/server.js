@@ -1,26 +1,23 @@
 require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const connectDB = require("./config/db");
+const express     = require("express");
+const cors        = require("cors");
+const helmet      = require("helmet");
+const rateLimit   = require("express-rate-limit");
+const connectDB   = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 
-// Routes
-const authRoutes = require("./routes/authRoutes");
+const authRoutes    = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
-const orderRoutes = require("./routes/orderRoutes");
+const orderRoutes   = require("./routes/orderRoutes");
 
-// Connect DB
 connectDB();
 
 const app = express();
 
-// ─── Middlewares ───────────────────────────────────────────────
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// ─── CORS ───────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
@@ -28,59 +25,39 @@ const allowedOrigins = [
   "https://restaurantdemakh.vercel.app",
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: "Trop de tentatives, réessayez dans 15 minutes" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/auth/login",    authLimiter);
+app.use("/api/auth/register", authLimiter);
+
+app.get("/", (req, res) => res.json({ success: true, message: "Sénégal Dishes API is running" }));
+
+app.use("/api/auth",     authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders",   orderRoutes);
+
+app.get("/api/health", (req, res) =>
+  res.json({ success: true, timestamp: new Date().toISOString() })
 );
 
-// ─── Routes ─────────────────────────────────────────────────────
+app.use("*", (req, res) =>
+  res.status(404).json({ success: false, message: "Route not found" })
+);
 
-// Root route (fix "Route / not found")
-app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Sénégal Dishes API is running 🍛",
-    endpoints: ["/api/auth", "/api/products", "/api/orders", "/api/health"],
-  });
-});
-
-// API routes
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/orders", orderRoutes);
-
-// Health check (Render / deployment)
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "API is healthy 🚀",
-    environment: process.env.NODE_ENV || "development",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// ─── 404 Handler ───────────────────────────────────────────────
-app.use("*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
-  });
-});
-
-// ─── Global Error Handler ──────────────────────────────────────
 app.use(errorHandler);
 
-// ─── Start Server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 5001;
-
-app.listen(PORT, () => {
-  console.log(`
-🚀 Server running in ${process.env.NODE_ENV || "development"} mode
-🌍 Port: ${PORT}
-📡 API: http://localhost:${PORT}/api
-  `);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
